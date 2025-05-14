@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Everybox 테스트용 로그인/회원가입</title>
+</head>
+<body>
+  <h2>🎓 Everybox 대학생 전용 로그인 / 회원가입</h2>
+
+  <h3>📌 회원가입</h3>
+  <form id="signupForm">
+    <label>이메일 (@ac.kr): <input type="email" id="signupEmail" required></label><br>
+    <label>비밀번호: <input type="password" id="signupPassword" required></label><br>
+    <label>닉네임: <input type="text" id="signupNickname" required></label><br>
+    <button type="submit">회원가입</button>
+  </form>
+  <div id="signupResult" style="margin-top: 10px; color: green;"></div>
+
+  <hr>
+
+  <h3>🔐 로그인</h3>
+  <form id="loginForm">
+    <label>이메일: <input type="email" id="loginEmail" required></label><br>
+    <label>비밀번호: <input type="password" id="loginPassword" required></label><br>
+    <button type="submit">로그인</button>
+  </form>
+  <div id="loginResult" style="margin-top: 10px; color: blue;"></div>
+
+  <script>
+    const BASE_URL = "http://localhost:8080"; // 서버 주소
+
+    // 회원가입
+    document.getElementById("signupForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById("signupEmail").value;
+      const password = document.getElementById("signupPassword").value;
+      const nickname = document.getElementById("signupNickname").value;
+
+      const response = await fetch(`${BASE_URL}/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, nickname })
+      });
+
+      const text = await response.text();
+      document.getElementById("signupResult").innerText = response.ok ? `✅ ${text}` : `❌ ${text}`;
+    });
+
+    // 로그인
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
+
+      const response = await fetch(`${BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const text = await response.text();
+      if (response.ok) {
+        localStorage.setItem("jwt", text.replace("Bearer ", ""));
+        document.getElementById("loginResult").innerText = "✅ 로그인 성공! 토큰 저장됨.";
+      } else {
+        document.getElementById("loginResult").innerText = `❌ ${text}`;
+      }
+    });
+  </script>
+</body>
+</html>
