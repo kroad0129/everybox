@@ -1,8 +1,8 @@
 package com.everybox.everybox.controller;
 
-import com.everybox.everybox.domain.Message;
+import com.everybox.everybox.dto.ChatMessageDto;
+import com.everybox.everybox.dto.MessageDto;
 import com.everybox.everybox.service.ChatService;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -17,18 +17,10 @@ public class ChatSocketController {
 
     @MessageMapping("/chat.send/{chatRoomId}")
     public void sendMessage(@DestinationVariable Long chatRoomId, ChatMessageDto messageDto) {
-        Message message = chatService.sendMessage(
-                chatRoomId,
-                messageDto.getSenderId(),
-                messageDto.getContent()
+        // 메시지 저장 및 송신
+        MessageDto saved = MessageDto.from(
+                chatService.sendMessage(chatRoomId, messageDto.getSenderId(), messageDto.getContent())
         );
-
-        messagingTemplate.convertAndSend("/topic/chatroom/" + chatRoomId, message);
-    }
-
-    @Data
-    public static class ChatMessageDto {
-        private Long senderId;
-        private String content;
+        messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, saved);
     }
 }

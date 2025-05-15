@@ -39,7 +39,6 @@ public class ChatService {
         return chatRoomRepository.save(chatRoom);
     }
 
-
     public Message sendMessage(Long chatRoomId, Long senderId, String content) {
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new IllegalArgumentException("ChatRoom not found"));
@@ -70,5 +69,4 @@ public class ChatService {
     public List<ChatRoom> getReceivedChatRooms(Long userId) {
         return chatRoomRepository.findByReceiverId(userId);
     }
-
 }

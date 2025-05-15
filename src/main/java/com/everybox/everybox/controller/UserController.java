@@ -1,9 +1,10 @@
 package com.everybox.everybox.controller;
 
-import com.everybox.everybox.domain.User;
-import com.everybox.everybox.repository.UserRepository;
-import lombok.Data;
+import com.everybox.everybox.dto.SignupRequest;
+import com.everybox.everybox.dto.UserResponseDto;
+import com.everybox.everybox.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -11,23 +12,11 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     @PostMapping
-    public User createUser(@RequestBody CreateUserRequest request) {
-        User user = User.builder()
-                .email(request.getEmail())
-                .nickname(request.getNickname())
-                .password(request.getPassword())
-                .build();
-
-        return userRepository.save(user);
-    }
-
-    @Data
-    static class CreateUserRequest {
-        private String email;
-        private String nickname;
-        private String password;
+    public ResponseEntity<UserResponseDto> createUser(@RequestBody SignupRequest request) {
+        UserResponseDto user = userService.registerUser(request);
+        return ResponseEntity.ok(user);
     }
 }

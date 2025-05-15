@@ -7,6 +7,7 @@ import com.everybox.everybox.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -16,22 +17,31 @@ public class PostService {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
 
-    public Post createPost(String title, String content, String location, Long userId) {
+    public Post createPost(String title, String details, String location, int quantity, String imageUrl, Long userId) {
         User giver = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         Post post = Post.builder()
                 .title(title)
-                .content(content)
+                .details(details)
                 .location(location)
-                .isClosed(false)
+                .quantity(quantity)
+                .imageUrl(imageUrl)
                 .giver(giver)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .isClosed(false)
                 .build();
 
         return postRepository.save(post);
     }
 
-    public List<Post> getAvailablePosts() {
-        return postRepository.findByIsClosedFalse();
+    public List<Post> getAllPosts() {
+        return postRepository.findAll();
+    }
+
+    public Post getPostById(Long postId) {
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("Post not found"));
     }
 }

@@ -16,15 +16,16 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String content;
-
-    private LocalDateTime createdAt;
-
     @ManyToOne
-    @JoinColumn(name = "chatroom_id")
+    @JoinColumn(name = "chatroom_id", nullable = false)
     private ChatRoom chatRoom;
 
     @ManyToOne
-    @JoinColumn(name = "sender_id")
+    @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
+
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

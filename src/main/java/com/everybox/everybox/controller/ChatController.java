@@ -1,15 +1,18 @@
 package com.everybox.everybox.controller;
 
-import com.everybox.everybox.domain.ChatRoom;
-import com.everybox.everybox.domain.Message;
-import com.everybox.everybox.service.ChatService;
+import com.everybox.everybox.dto.ChatRoomRequestDto;
+import com.everybox.everybox.dto.ChatRoomResponseDto;
+import com.everybox.everybox.dto.MessageDto;
+import com.everybox.everybox.dto.MessageRequestDto;
 import com.everybox.everybox.security.JwtAuthentication;
-import lombok.Data;
+import com.everybox.everybox.service.ChatService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/chatrooms")
@@ -19,39 +22,51 @@ public class ChatController {
     private final ChatService chatService;
 
     @PostMapping
-    public ChatRoom createChatRoom(@RequestBody ChatRoomRequest request, Authentication authentication) {
+    public ResponseEntity<ChatRoomResponseDto> createChatRoom(
+            @RequestBody ChatRoomRequestDto request,
+            Authentication authentication) {
         Long senderId = ((JwtAuthentication) authentication.getPrincipal()).getUserId();
-        return chatService.createChatRoom(senderId, request.getPostId());
+        return ResponseEntity.ok(ChatRoomResponseDto.from(chatService.createChatRoom(senderId, request.getPostId())));
     }
 
     @PostMapping("/{chatRoomId}/messages")
-    public Message sendMessage(@PathVariable Long chatRoomId, @RequestBody MessageRequest request) {
-        return chatService.sendMessage(chatRoomId, request.getSenderId(), request.getContent());
+    public ResponseEntity<MessageDto> sendMessage(
+            @PathVariable Long chatRoomId,
+            @RequestBody MessageRequestDto request,
+            Authentication authentication) {
+        Long senderId = ((JwtAuthentication) authentication.getPrincipal()).getUserId();
+        return ResponseEntity.ok(MessageDto.from(chatService.sendMessage(chatRoomId, senderId, request.getContent())));
     }
 
     @GetMapping("/{chatRoomId}/messages")
-    public List<Message> getMessages(@PathVariable Long chatRoomId) {
-        return chatService.getMessages(chatRoomId);
-    }
-
-    @Data
-    public static class ChatRoomRequest {
-        private Long postId; // ✅ senderId 제거
-    }
-
-    @Data
-    public static class MessageRequest {
-        private Long senderId;
-        private String content;
+    public ResponseEntity<List<MessageDto>> getMessages(@PathVariable Long chatRoomId) {
+        return ResponseEntity.ok(
+                chatService.getMessages(chatRoomId)
+                        .stream()
+                        .map(MessageDto::from)
+                        .collect(Collectors.toList())
+        );
     }
 
     @GetMapping("/sent")
-    public List<ChatRoom> getSentChatRooms(@RequestParam Long userId) {
-        return chatService.getSentChatRooms(userId);
+    public ResponseEntity<List<ChatRoomResponseDto>> getSentChatRooms(Authentication authentication) {
+        Long userId = ((JwtAuthentication) authentication.getPrincipal()).getUserId();
+        return ResponseEntity.ok(
+                chatService.getSentChatRooms(userId)
+                        .stream()
+                        .map(ChatRoomResponseDto::from)
+                        .collect(Collectors.toList())
+        );
     }
 
     @GetMapping("/received")
-    public List<ChatRoom> getReceivedChatRooms(@RequestParam Long userId) {
-        return chatService.getReceivedChatRooms(userId);
+    public ResponseEntity<List<ChatRoomResponseDto>> getReceivedChatRooms(Authentication authentication) {
+        Long userId = ((JwtAuthentication) authentication.getPrincipal()).getUserId();
+        return ResponseEntity.ok(
+                chatService.getReceivedChatRooms(userId)
+                        .stream()
+                        .map(ChatRoomResponseDto::from)
+                        .collect(Collectors.toList())
+        );
     }
 }
