@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>채팅방</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #chatBox {
+            border: 1px solid #ccc;
+            height: 300px;
+            overflow-y: scroll;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f9f9f9;
+        }
+        .me { text-align: right; color: blue; margin: 5px; }
+        .other { text-align: left; color: green; margin: 5px; }
+        #status { margin-top: 5px; font-size: 14px; color: gray; }
+    </style>
+</head>
+<body>
+<h2>💬 채팅방</h2>
+<div id="chatBox"></div>
+<input id="messageInput" type="text" placeholder="메시지 입력">
+<button onclick="sendMessage()">전송</button>
+<div id="status">⏳ 웹소켓 연결 중...</div>
+
+<script>
+    const params = new URLSearchParams(location.search);
+    const chatRoomId = params.get('chatRoomId');
+    let jwt = params.get('jwt') || localStorage.getItem("jwt"); // ✅ URL 우선 → localStorage 보조
+
+    let userId = null;
+    let stomp = null;
+
+    if (!chatRoomId || !jwt) {
+        alert("잘못된 접근입니다.");
+        window.location.href = "index.html";
+    }
+
+    async function init() {
+        try {
+            // 사용자 정보 가져오기
+            const me = await fetch("http://localhost:8080/auth/me", {
+                headers: { Authorization: `Bearer ${jwt}` }
+            }).then(res => {
+                if (!res.ok) throw new Error("사용자 인증 실패");
+                return res.json();
+            });
+            userId = me.id;
+
+            // 메시지 목록 불러오기
+            console.log("JWT 보내기 전 확인:", jwt);
+            const messages = await fetch(`http://localhost:8080/chatrooms/${chatRoomId}/messages`, {
+                headers: { Authorization: `Bearer ${jwt}` }
+            }).then(res => {
+                if (!res.ok) throw new Error("메시지 불러오기 실패");
+                return res.json();
+            });
+            messages.forEach(showMessage);
+
+            // 웹소켓 연결
+            const socket = new SockJS("http://localhost:8080/ws-chat");
+            stomp = Stomp.over(socket);
+            stomp.connect({ Authorization: `Bearer ${jwt}` }, () => {
+                document.getElementById("status").innerText = "✅ 연결됨";
+                stomp.subscribe(`/topic/chatroom/${chatRoomId}`, msg => {
+                    const message = JSON.parse(msg.body);
+                    showMessage(message);
+                });
+            }, (err) => {
+                document.getElementById("status").innerText = "❌ 연결 실패";
+                console.error("웹소켓 연결 실패", err);
+            });
+
+        } catch (e) {
+            alert("초기화 중 오류 발생: " + e.message);
+        }
+    }
+
+    function showMessage(msg) {
+        const box = document.getElementById("chatBox");
+        const div = document.createElement("div");
+        div.className = msg.sender.id === userId ? 'me' : 'other';
+        div.innerText = `${msg.sender.nickname}: ${msg.content}`;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function sendMessage() {
+        const content = document.getElementById("messageInput").value.trim();
+        if (!content) return;
+        stomp.send(`/app/chat.send/${chatRoomId}`, {}, JSON.stringify({
+            senderId: userId,
+            content: content
+        }));
+        document.getElementById("messageInput").value = '';
+    }
+
+    init();
+</script>
+</body>
+</html>

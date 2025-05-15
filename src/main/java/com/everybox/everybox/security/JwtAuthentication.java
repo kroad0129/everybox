@@ -16,6 +16,14 @@ public class JwtAuthentication implements Authentication {
         this.email = email;
     }
 
+    public Long getUserId() {
+        return userId;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return null; // 권한 없음
@@ -33,7 +41,7 @@ public class JwtAuthentication implements Authentication {
 
     @Override
     public Object getPrincipal() {
-        return userId;
+        return this; // ✅ 전체 객체 반환
     }
 
     @Override

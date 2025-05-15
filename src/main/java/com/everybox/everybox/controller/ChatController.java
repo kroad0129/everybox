@@ -3,9 +3,11 @@ package com.everybox.everybox.controller;
 import com.everybox.everybox.domain.ChatRoom;
 import com.everybox.everybox.domain.Message;
 import com.everybox.everybox.service.ChatService;
+import com.everybox.everybox.security.JwtAuthentication;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -17,8 +19,9 @@ public class ChatController {
     private final ChatService chatService;
 
     @PostMapping
-    public ChatRoom createChatRoom(@RequestBody ChatRoomRequest request) {
-        return chatService.createChatRoom(request.getSenderId(), request.getPostId());
+    public ChatRoom createChatRoom(@RequestBody ChatRoomRequest request, Authentication authentication) {
+        Long senderId = ((JwtAuthentication) authentication.getPrincipal()).getUserId();
+        return chatService.createChatRoom(senderId, request.getPostId());
     }
 
     @PostMapping("/{chatRoomId}/messages")
@@ -33,8 +36,7 @@ public class ChatController {
 
     @Data
     public static class ChatRoomRequest {
-        private Long senderId;
-        private Long postId;
+        private Long postId; // ✅ senderId 제거
     }
 
     @Data
@@ -52,5 +54,4 @@ public class ChatController {
     public List<ChatRoom> getReceivedChatRooms(@RequestParam Long userId) {
         return chatService.getReceivedChatRooms(userId);
     }
-
 }

@@ -1,80 +1,12 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Everybox - 포스트 + 채팅방 생성</title>
-  <style>
-    body { font-family: sans-serif; margin: 20px; }
-    input, button { margin: 5px 0; padding: 5px; width: 100%; }
-    #log { margin-top: 20px; background: #f9f9f9; padding: 10px; white-space: pre-wrap; border: 1px solid #ccc; }
-  </style>
+  <title>Kakao Login Test</title>
 </head>
 <body>
-  <h2>📝 포스트 등록 후 채팅방 생성</h2>
-
-  <label>사용자 ID (로그인 사용자):</label>
-  <input type="number" id="userId" value="2">
-
-  <label>제목:</label>
-  <input type="text" id="title" value="나눔합니다">
-
-  <label>내용:</label>
-  <input type="text" id="content" value="짜파게티 2개 남음">
-
-  <label>위치:</label>
-  <input type="text" id="location" value="세종대 앞">
-
-  <button onclick="createPostAndChatroom()">📩 등록 + 채팅 생성</button>
-
-  <div id="log">📋 로그:</div>
-
-  <script>
-    function log(message) {
-      const logEl = document.getElementById("log");
-      logEl.innerText += "\n" + message;
-    }
-
-    async function createPostAndChatroom() {
-      const userId = parseInt(document.getElementById("userId").value);
-      const title = document.getElementById("title").value;
-      const content = document.getElementById("content").value;
-      const location = document.getElementById("location").value;
-
-      // 1. 포스트 생성
-      try {
-        const postRes = await fetch("http://localhost:8080/posts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, content, location, userId })
-        });
-
-        if (!postRes.ok) {
-          const errText = await postRes.text();
-          throw new Error(`❌ 포스트 생성 실패 (${postRes.status}): ${errText}`);
-        }
-
-        const post = await postRes.json();
-        const postId = post.id;
-        log(`✅ 포스트 생성 완료! postId: ${postId}`);
-
-        // 2. 채팅방 생성 요청
-        const chatroomRes = await fetch("http://localhost:8080/chatrooms", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postId, requesterId: userId })
-        });
-
-        if (!chatroomRes.ok) {
-          const chatErr = await chatroomRes.text();
-          throw new Error(`❌ 채팅방 생성 실패 (${chatroomRes.status}): ${chatErr}`);
-        }
-
-        const chatroom = await chatroomRes.json();
-        log(`✅ 채팅방 생성 완료! chatRoomId: ${chatroom.id}`);
-      } catch (e) {
-        log(e.message);
-      }
-    }
-  </script>
+  <h1>카카오 로그인 테스트</h1>
+  <a href="http://localhost:8080/oauth2/authorization/kakao">
+    <button>카카오 로그인</button>
+  </a>
 </body>
 </html>

@@ -26,6 +26,10 @@ public class ChatService {
 
         User receiver = post.getGiver();
 
+        if (sender.getId().equals(receiver.getId())) {
+            throw new IllegalArgumentException("❌ 본인의 게시글에는 채팅을 시작할 수 없습니다.");
+        }
+
         ChatRoom chatRoom = ChatRoom.builder()
                 .sender(sender)
                 .receiver(receiver)
@@ -34,6 +38,7 @@ public class ChatService {
 
         return chatRoomRepository.save(chatRoom);
     }
+
 
     public Message sendMessage(Long chatRoomId, Long senderId, String content) {
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)

@@ -41,4 +41,15 @@ public class UserService {
         return userRepository.findById(id);
     }
 
+    public User findOrCreateKakaoUser(String email, String nickname) {
+        return userRepository.findByEmail(email)
+                .orElseGet(() -> {
+                    User user = User.builder()
+                            .email(email)
+                            .nickname(nickname)
+                            .password(null)  // 소셜 로그인은 비밀번호 없음
+                            .build();
+                    return userRepository.save(user);
+                });
+    }
 }

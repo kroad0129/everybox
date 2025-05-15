@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Everybox</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        section { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; }
+        input, button { margin: 5px 0; padding: 5px; width: 100%; }
+        .post, .chatroom { border: 1px solid #ddd; padding: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<h1>📦 Everybox</h1>
+
+<section id="loginSection">
+    <h2>🔐 로그인</h2>
+    <input id="email" type="email" placeholder="이메일">
+    <input id="password" type="password" placeholder="비밀번호">
+    <button onclick="login()">로그인</button>
+    <div style="margin: 10px 0; text-align: center;">or</div>
+    <button onclick="location.href='http://localhost:8080/oauth2/authorization/kakao'" style="background-color: #FEE500; border: none; font-weight: bold;">
+        🌟 카카오 로그인
+    </button>
+    <div id="loginResult"></div>
+</section>
+
+<section id="mainSection" style="display:none">
+    <h2>👤 <span id="nickname"></span> 님 로그인 중</h2>
+    <button onclick="logout()">로그아웃</button>
+
+    <h3>📝 게시글 등록</h3>
+    <input id="postTitle" placeholder="제목">
+    <input id="postContent" placeholder="내용">
+    <input id="postLocation" placeholder="위치">
+    <button onclick="createPost()">등록</button>
+    <div id="postResult"></div>
+
+    <h3>📜 게시글 목록</h3>
+    <div id="postList">Loading...</div>
+
+    <h3>💬 내 채팅방</h3>
+    <div id="chatRoomList">Loading...</div>
+</section>
+
+<script>
+    const BASE = 'http://localhost:8080';
+    let jwt = null;
+    let userId = null;
+    let nickname = null;
+
+    setInterval(() => {
+        if (jwt && userId) {
+            loadPosts();
+            loadChatRooms();
+        }
+    }, 5000);
+
+    // ✅ 카카오 로그인 후 토큰이 URL로 넘어온 경우 자동 로그인 처리
+    window.addEventListener("DOMContentLoaded", async () => {
+        const params = new URLSearchParams(window.location.search);
+        const tokenFromKakao = params.get("token");
+
+        if (tokenFromKakao) {
+            jwt = tokenFromKakao;
+            localStorage.setItem("jwt", jwt);
+
+            try {
+                const me = await fetch(`${BASE}/auth/me`, {
+                    headers: { Authorization: `Bearer ${jwt}` }
+                }).then(res => res.json());
+
+                userId = me.id;
+                nickname = me.nickname;
+                document.getElementById('nickname').innerText = nickname;
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('mainSection').style.display = 'block';
+                loadPosts();
+                loadChatRooms();
+            } catch (e) {
+                console.error("토큰 인증 실패", e);
+            }
+
+            // ✅ URL 정리 (token 제거)
+            window.history.replaceState({}, document.title, "/index.html");
+        }
+    });
+
+    if (jwt) autoLogin();
+
+    async function autoLogin() {
+        try {
+            const me = await fetch(`${BASE}/auth/me`, {
+                headers: { Authorization: `Bearer ${jwt}` }
+            }).then(r => r.json());
+            userId = me.id;
+            nickname = me.nickname;
+            document.getElementById('nickname').innerText = nickname;
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('mainSection').style.display = 'block';
+            loadPosts();
+            loadChatRooms();
+        } catch (e) {
+            console.log("가장 발금이 아니고 사용할 수 없는 JWT");
+        }
+    }
+
+    async function login() {
+        const res = await fetch(`${BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            })
+        });
+        const token = await res.text();
+        if (res.ok) {
+            jwt = token.replace("Bearer ", "");
+            localStorage.setItem("jwt", jwt);
+            await autoLogin();
+        } else {
+            document.getElementById('loginResult').innerText = `❌ 로그인 실패: ${token}`;
+        }
+    }
+
+    window.onload = async function() {
+        jwt = localStorage.getItem("jwt");
+        if (jwt) {
+            try {
+                const me = await fetch(`${BASE}/auth/me`, {
+                    headers: { Authorization: `Bearer ${jwt}` }
+                }).then(r => r.json());
+                userId = me.id;
+                nickname = me.nickname;
+                document.getElementById('nickname').innerText = nickname;
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('mainSection').style.display = 'block';
+                loadPosts();
+                loadChatRooms();
+            } catch (e) {
+                console.log("자동 로그인 실패", e);
+                logout();
+            }
+        }
+    }
+
+    function logout() {
+        jwt = null;
+        userId = null;
+        localStorage.removeItem("jwt");
+        document.getElementById('mainSection').style.display = 'none';
+        document.getElementById('loginSection').style.display = 'block';
+    }
+
+    async function createPost() {
+        const res = await fetch(`${BASE}/posts`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+            body: JSON.stringify({
+                title: document.getElementById('postTitle').value,
+                content: document.getElementById('postContent').value,
+                location: document.getElementById('postLocation').value
+            })
+        });
+        if (res.ok) {
+            document.getElementById('postResult').innerText = '✅ 게시글 등록 완료!';
+            loadPosts();
+        } else {
+            alert(await res.text());
+        }
+    }
+
+    async function loadPosts() {
+        const res = await fetch(`${BASE}/posts`, {
+            headers: { Authorization: `Bearer ${jwt}` }
+        });
+        if (!res.ok) {
+            document.getElementById('postList').innerText = '❌ 게시글 목록 등록 실패';
+            return;
+        }
+        const posts = await res.json();
+        document.getElementById('postList').innerHTML = posts.map(p => `
+        <div class="post">
+            <b>${p.title}</b> - ${p.content} (${p.location})<br>
+            👤 작성자: ${p.giver.nickname}<br>
+            ${p.giver.id !== userId ? `<button onclick="startChat(${p.id})">💬 채팅 시작</button>` : '<i>내 게시글</i>'}
+        </div>
+    `).join('');
+    }
+
+    async function startChat(postId) {
+        const res = await fetch(`${BASE}/chatrooms`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+            body: JSON.stringify({ postId })
+        });
+        if (res.ok) {
+            const chatroom = await res.json();
+            window.location.href = `chat.html?chatRoomId=${chatroom.id}&jwt=${jwt}`;
+        } else {
+            alert(await res.text());
+        }
+    }
+
+    async function loadChatRooms() {
+        const sent = await fetch(`${BASE}/chatrooms/sent?userId=${userId}`, { headers: { Authorization: `Bearer ${jwt}` } }).then(r => r.json());
+        const received = await fetch(`${BASE}/chatrooms/received?userId=${userId}`, { headers: { Authorization: `Bearer ${jwt}` } }).then(r => r.json());
+        const combined = [...sent, ...received];
+
+        if (combined.length === 0) {
+            document.getElementById('chatRoomList').innerHTML = "<i>참여 중인 채팅방이 없습니다.</i>";
+            return;
+        }
+
+        document.getElementById('chatRoomList').innerHTML = combined.map(c => `
+        <div class="chatroom">
+            📝 ${c.post.title}<br>
+            👥 상대: ${c.sender.id === userId ? c.receiver.nickname : c.sender.nickname}<br>
+            <button onclick="goToChat(${c.id})">입장</button>
+        </div>
+    `).join('');
+    }
+
+    function goToChat(chatRoomId) {
+        window.location.href = `chat.html?chatRoomId=${chatRoomId}&jwt=${jwt}`;
+    }
+</script>
+</body>
+</html>

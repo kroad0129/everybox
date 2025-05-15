@@ -5,13 +5,16 @@ import com.everybox.everybox.dto.SignupRequest;
 import com.everybox.everybox.domain.User;
 import com.everybox.everybox.service.UserService;
 import com.everybox.everybox.util.JwtUtil;
+import com.everybox.everybox.security.JwtAuthentication;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
-
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 
 import java.util.Map;
 import java.util.Optional;
@@ -57,7 +60,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
         }
 
-        Long userId = (Long) authentication.getPrincipal();
+        Long userId = ((JwtAuthentication) authentication.getPrincipal()).getUserId();
         Optional<User> userOpt = userService.findById(userId);
 
         if (userOpt.isEmpty()) {
@@ -72,4 +75,19 @@ public class AuthController {
         ));
     }
 
+    @GetMapping("/kakao/success")
+    public ResponseEntity<?> kakaoLoginSuccess(OAuth2AuthenticationToken authentication) {
+        Map<String, Object> attributes = authentication.getPrincipal().getAttributes();
+
+        Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
+        Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
+
+        String email = (String) kakaoAccount.get("email");
+        String nickname = (String) profile.get("nickname");
+
+        User user = userService.findOrCreateKakaoUser(email, nickname);
+        String token = jwtUtil.generateToken(user.getId(), user.getEmail());
+
+        return ResponseEntity.ok().body(Map.of("token", token));
+    }
 }
