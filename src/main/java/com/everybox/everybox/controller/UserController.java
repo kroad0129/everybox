@@ -16,7 +16,7 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
+    public ResponseEntity<?> signup(@RequestBody UserSignupRequestDto request) {
         if (request.getUsername() == null || request.getUsername().isBlank() ||
                 request.getPassword() == null || request.getPassword().isBlank() ||
                 request.getNickname() == null || request.getNickname().isBlank()) {
@@ -29,7 +29,7 @@ public class UserController {
 
     @PostMapping("/email/verify-request")
     public ResponseEntity<?> sendVerificationMail(
-            @RequestBody EmailRequest request,
+            @RequestBody EmailSendRequestDto request,
             Authentication authentication) {
         if (request.getEmail() == null || request.getEmail().isBlank()) {
             return ResponseEntity.badRequest().body("이메일을 입력하세요.");
@@ -41,7 +41,7 @@ public class UserController {
 
     @PostMapping("/email/verify-confirm")
     public ResponseEntity<?> verifyEmail(
-            @RequestBody EmailVerifyRequest request,
+            @RequestBody EmailVerifyRequestDto request,
             Authentication authentication) {
         if (request.getCode() == null || request.getCode().isBlank()) {
             return ResponseEntity.badRequest().body("인증코드를 입력하세요.");
@@ -54,7 +54,7 @@ public class UserController {
     @PutMapping("/{userId}")
     public ResponseEntity<UserResponseDto> updateUser(
             @PathVariable Long userId,
-            @RequestBody UpdateUserRequestDto request,
+            @RequestBody UserUpdateRequestDto request,
             Authentication authentication) {
         Long loginUserId = ((JwtAuthentication) authentication.getPrincipal()).getUserId();
         return ResponseEntity.ok(userService.updateUser(userId, loginUserId, request));

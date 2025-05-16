@@ -5,10 +5,11 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class CreatePostRequestDto {
+public class PostUpdateRequestDto {
     private String title;
     private String details;
     private String location;
-    private int quantity;
+    private Integer quantity;
     private String imageUrl;
+    private Boolean isClosed;
 }

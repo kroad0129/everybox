@@ -21,17 +21,20 @@
 <!-- 이메일 인증 -->
 <hr>
 <h2>이메일 인증</h2>
-<form id="verifyMailForm">
-    <input type="email" id="verifyEmail" placeholder="이메일 입력" required>
-    <button type="submit">인증 코드 발송</button>
-</form>
-<pre id="verifyMailResult"></pre>
+<div id="emailVerifySection">
+    <form id="verifyMailForm">
+        <input type="email" id="verifyEmail" placeholder="이메일 입력" required>
+        <button type="submit">인증 코드 발송</button>
+    </form>
+    <pre id="verifyMailResult"></pre>
 
-<form id="verifyCodeForm" style="margin-top:10px;">
-    <input type="text" id="verifyCode" placeholder="인증코드 입력" required>
-    <button type="submit">인증 코드 확인</button>
-</form>
-<pre id="verifyCodeResult"></pre>
+    <form id="verifyCodeForm" style="margin-top:10px;">
+        <input type="text" id="verifyCode" placeholder="인증코드 입력" required>
+        <button type="submit">인증 코드 확인</button>
+    </form>
+    <pre id="verifyCodeResult"></pre>
+</div>
+<div id="verifiedMessage" style="display:none; color: green; font-weight: bold;"></div>
 
 <hr>
 <h2>내 정보</h2>
@@ -66,6 +69,9 @@
         document.getElementById('kakaoLoginResult').textContent = '';
         document.getElementById('myinfo').textContent = '';
         document.getElementById('logoutBtn').style.display = 'none';
+        toggleEmailVerifySection(false);
+        document.getElementById('verifiedMessage').style.display = 'none';
+        document.getElementById('verifiedMessage').textContent = '';
     };
 
     document.getElementById('kakaoLoginBtn').addEventListener('click', function() {
@@ -88,6 +94,8 @@
             if (jwtToken) {
                 document.getElementById('logoutBtn').style.display = 'inline';
                 loadMyInfo(); // 새로고침 후에도 내 정보 유지
+            } else {
+                toggleEmailVerifySection(false);
             }
         }
     };
@@ -113,10 +121,16 @@
                     loadMyInfo(); // ✅ 일반 로그인 시 내 정보 자동조회!
                 } else {
                     document.getElementById('loginResult').textContent = '로그인 실패\n' + JSON.stringify(data, null, 2);
+                    toggleEmailVerifySection(false);
+                    document.getElementById('verifiedMessage').style.display = 'none';
+                    document.getElementById('verifiedMessage').textContent = '';
                 }
             })
             .catch(err => {
                 document.getElementById('loginResult').textContent = 'Error: ' + err;
+                toggleEmailVerifySection(false);
+                document.getElementById('verifiedMessage').style.display = 'none';
+                document.getElementById('verifiedMessage').textContent = '';
             });
     });
 
@@ -127,19 +141,37 @@
             document.getElementById('verifyMailResult').textContent = '로그인 후 이용하세요.';
             return;
         }
-        fetch('http://localhost:8080/users/email/verify-request', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': jwtToken
-            },
-            body: JSON.stringify({
-                email: document.getElementById('verifyEmail').value
-            })
+        const email = document.getElementById('verifyEmail').value;
+        // 먼저 내 정보를 가져와서 인증된 이메일 중복 확인
+        fetch('http://localhost:8080/auth/me', {
+            headers: { 'Authorization': jwtToken }
         })
-            .then(res => res.text())
-            .then(data => {
-                document.getElementById('verifyMailResult').textContent = data;
+            .then(res => res.json())
+            .then(user => {
+                if (user.universityEmail && user.universityEmail === email && user.isVerified) {
+                    document.getElementById('verifyMailResult').textContent = '이미 인증된 이메일입니다.';
+                    return;
+                }
+                // 이메일이 다른 유저에게 이미 인증된 상태인지 체크하는 API를 서버에 구현해야함
+                // 여기서는 서버가 중복 이메일 인증 시 예외를 던진다고 가정하고 그냥 발송 요청
+                fetch('http://localhost:8080/users/email/verify-request', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': jwtToken
+                    },
+                    body: JSON.stringify({ email: email })
+                })
+                    .then(res => {
+                        if (res.ok) {
+                            document.getElementById('verifyMailResult').textContent = '인증 메일을 발송했습니다.';
+                        } else {
+                            return res.text().then(text => { throw new Error(text); });
+                        }
+                    })
+                    .catch(err => {
+                        document.getElementById('verifyMailResult').textContent = 'Error: ' + err.message;
+                    });
             })
             .catch(err => {
                 document.getElementById('verifyMailResult').textContent = 'Error: ' + err;
@@ -159,24 +191,34 @@
                 'Content-Type': 'application/json',
                 'Authorization': jwtToken
             },
-            body: JSON.stringify({
-                code: document.getElementById('verifyCode').value
-            })
+            body: JSON.stringify({ code: document.getElementById('verifyCode').value })
         })
-            .then(res => res.text())
-            .then(data => {
-                document.getElementById('verifyCodeResult').textContent = data;
+            .then(res => {
+                if (res.ok) {
+                    document.getElementById('verifyCodeResult').textContent = '이메일 인증 완료! 이제 모든 서비스 이용이 가능합니다.';
+                    loadMyInfo(); // 인증 상태 갱신용 내정보 재조회
+                } else {
+                    return res.text().then(text => { throw new Error(text); });
+                }
             })
             .catch(err => {
-                document.getElementById('verifyCodeResult').textContent = 'Error: ' + err;
+                document.getElementById('verifyCodeResult').textContent = 'Error: ' + err.message;
             });
     });
 
-    // 내 정보 조회
+    // 이메일 인증 폼(섹션) 표시/숨김 함수
+    function toggleEmailVerifySection(show) {
+        document.getElementById('emailVerifySection').style.display = show ? 'block' : 'none';
+    }
+
+    // 내 정보 조회 (수정: isVerified 체크 후 이메일 인증 UI 토글)
     function loadMyInfo() {
         if (!jwtToken) {
             document.getElementById('myinfo').textContent = '로그인 후 이용하세요.';
             document.getElementById('logoutBtn').style.display = 'none';
+            toggleEmailVerifySection(false);
+            document.getElementById('verifiedMessage').style.display = 'none';
+            document.getElementById('verifiedMessage').textContent = '';
             return;
         }
         fetch('http://localhost:8080/auth/me', {
@@ -185,9 +227,25 @@
             .then(res => res.json())
             .then(data => {
                 document.getElementById('myinfo').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('logoutBtn').style.display = 'inline';
+
+                if(data.isVerified) {
+                    // 이메일 인증 완료 상태
+                    toggleEmailVerifySection(false);
+                    document.getElementById('verifiedMessage').style.display = 'block';
+                    document.getElementById('verifiedMessage').textContent = `✅ 대학생 인증이 완료된 계정입니다. (${data.universityEmail})`;
+                } else {
+                    // 이메일 인증 필요 상태
+                    toggleEmailVerifySection(true);
+                    document.getElementById('verifiedMessage').style.display = 'none';
+                    document.getElementById('verifiedMessage').textContent = '';
+                }
             })
             .catch(err => {
                 document.getElementById('myinfo').textContent = 'Error: ' + err;
+                toggleEmailVerifySection(false);
+                document.getElementById('verifiedMessage').style.display = 'none';
+                document.getElementById('verifiedMessage').textContent = '';
             });
     }
 
@@ -223,7 +281,9 @@
 
     // 게시글 목록 조회
     function loadPosts() {
-        fetch('http://localhost:8080/posts')
+        fetch('http://localhost:8080/posts', {
+            headers: { 'Authorization': jwtToken }
+        })
             .then(res => res.json())
             .then(data => {
                 document.getElementById('posts').textContent = JSON.stringify(data, null, 2);

@@ -3,7 +3,6 @@ package com.everybox.everybox.dto;
 import com.everybox.everybox.domain.Post;
 import lombok.Builder;
 import lombok.Getter;
-
 import java.time.LocalDateTime;
 
 @Getter

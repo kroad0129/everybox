@@ -2,7 +2,7 @@ package com.everybox.everybox.service;
 
 import com.everybox.everybox.domain.Post;
 import com.everybox.everybox.domain.User;
-import com.everybox.everybox.dto.UpdatePostRequestDto;
+import com.everybox.everybox.dto.PostUpdateRequestDto;
 import com.everybox.everybox.repository.PostRepository;
 import com.everybox.everybox.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -55,7 +55,7 @@ public class PostService {
         postRepository.delete(post);
     }
 
-    public Post updatePost(Long postId, Long userId, UpdatePostRequestDto request) {
+    public Post updatePost(Long postId, Long userId, PostUpdateRequestDto request) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("Post not found"));
         if (!post.getGiver().getId().equals(userId)) {

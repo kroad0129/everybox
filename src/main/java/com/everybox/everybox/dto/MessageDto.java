@@ -3,7 +3,6 @@ package com.everybox.everybox.dto;
 import com.everybox.everybox.domain.Message;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.format.DateTimeFormatter;
 
 @Getter

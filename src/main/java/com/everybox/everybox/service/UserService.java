@@ -1,9 +1,9 @@
 package com.everybox.everybox.service;
 
 import com.everybox.everybox.domain.User;
-import com.everybox.everybox.dto.LoginRequest;
-import com.everybox.everybox.dto.SignupRequest;
-import com.everybox.everybox.dto.UpdateUserRequestDto;
+import com.everybox.everybox.dto.UserLoginRequestDto;
+import com.everybox.everybox.dto.UserSignupRequestDto;
+import com.everybox.everybox.dto.UserUpdateRequestDto;
 import com.everybox.everybox.dto.UserResponseDto;
 import com.everybox.everybox.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ public class UserService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final MailService mailService;
 
-    public UserResponseDto registerUser(SignupRequest request) {
+    public UserResponseDto registerUser(UserSignupRequestDto request) {
         // 중복 ID 체크 등 비즈니스 정책
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("이미 가입된 아이디입니다.");
@@ -34,10 +34,15 @@ public class UserService {
     }
 
     public void sendVerificationCode(Long userId, String email) {
-        // 비즈니스 정책: 학교 이메일만 허용
         if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.ac\\.kr$")) {
             throw new IllegalArgumentException("학교 이메일(@xxx.ac.kr)만 인증 가능합니다.");
         }
+        // 이미 인증된 이메일인지 확인
+        userRepository.findByUniversityEmail(email).ifPresent(user -> {
+            if (user.getIsVerified() && !user.getId().equals(userId)) {
+                throw new IllegalArgumentException("이미 다른 계정에서 인증된 이메일입니다.");
+            }
+        });
         mailService.sendVerificationCode(userId, email);
     }
 
@@ -45,6 +50,9 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (mailService.verifyCode(userId, code)) {
+            String verifiedEmail = mailService.getVerifiedEmail(userId); // 인증된 이메일 조회
+            // 중복 체크는 이미 sendVerificationCode에서 했으므로 바로 저장
+            user.setUniversityEmail(verifiedEmail);
             user.setIsVerified(true);
             userRepository.save(user);
         } else {
@@ -52,7 +60,7 @@ public class UserService {
         }
     }
 
-    public UserResponseDto login(LoginRequest request) {
+    public UserResponseDto login(UserLoginRequestDto request) {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 아이디입니다."));
         if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -85,7 +93,7 @@ public class UserService {
                 });
     }
 
-    public UserResponseDto updateUser(Long userId, Long loginUserId, UpdateUserRequestDto request) {
+    public UserResponseDto updateUser(Long userId, Long loginUserId, UserUpdateRequestDto request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (!user.getId().equals(loginUserId)) {

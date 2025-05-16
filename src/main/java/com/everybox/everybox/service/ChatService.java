@@ -1,8 +1,8 @@
 package com.everybox.everybox.service;
 
 import com.everybox.everybox.domain.*;
-import com.everybox.everybox.dto.ChatMessageDto;
 import com.everybox.everybox.dto.MessageDto;
+import com.everybox.everybox.dto.MessageSendRequestDto;
 import com.everybox.everybox.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -42,7 +42,7 @@ public class ChatService {
     }
 
     // 메시지 저장
-    public Message saveMessage(ChatMessageDto dto) {
+    public Message saveMessage(MessageSendRequestDto dto) {
         ChatRoom chatRoom = chatRoomRepository.findById(dto.getChatRoomId()).orElseThrow();
         User sender = userRepository.findById(dto.getSenderId()).orElseThrow();
         Message message = Message.builder()

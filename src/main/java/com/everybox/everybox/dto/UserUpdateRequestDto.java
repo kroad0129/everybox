@@ -5,6 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class UpdateChatRoomRequestDto {
-    private String roomName;
+public class UserUpdateRequestDto {
+    private String nickname;
+    private String password;
 }

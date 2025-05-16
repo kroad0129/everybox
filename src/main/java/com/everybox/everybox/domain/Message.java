@@ -29,7 +29,6 @@ public class Message {
 
     private LocalDateTime createdAt;
 
-    // 저장 전에 실행되어 createdAt 자동 설정
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {

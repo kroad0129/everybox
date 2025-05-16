@@ -5,6 +5,6 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class UpdateMessageRequestDto {
-    private String content;
+public class EmailSendRequestDto {
+    private String email;
 }

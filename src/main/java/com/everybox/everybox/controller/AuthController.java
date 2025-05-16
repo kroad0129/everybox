@@ -1,18 +1,16 @@
 package com.everybox.everybox.controller;
 
-import com.everybox.everybox.dto.LoginRequest;
-import com.everybox.everybox.dto.SignupRequest;
+import com.everybox.everybox.dto.UserLoginRequestDto;
+import com.everybox.everybox.dto.UserSignupRequestDto;
 import com.everybox.everybox.dto.UserResponseDto;
 import com.everybox.everybox.service.UserService;
 import com.everybox.everybox.util.JwtUtil;
 import com.everybox.everybox.security.JwtAuthentication;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 
 import java.util.Map;
 
@@ -25,13 +23,13 @@ public class AuthController {
     private final JwtUtil jwtUtil;
 
     @PostMapping("/signup")
-    public ResponseEntity<UserResponseDto> signup(@RequestBody SignupRequest request) {
+    public ResponseEntity<UserResponseDto> signup(@RequestBody UserSignupRequestDto request) {
         UserResponseDto user = userService.registerUser(request);
         return ResponseEntity.ok(user);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<Map<String, String>> login(@RequestBody UserLoginRequestDto request) {
         UserResponseDto user = userService.login(request);
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
         return ResponseEntity.ok(Map.of("token", "Bearer " + token));
@@ -47,9 +45,6 @@ public class AuthController {
                 "잘못된 인증 방식입니다. 반드시 JWT 토큰으로 접근해야 합니다. (토큰 누락, 만료, 헤더 확인 필요)"
         );
     }
-
-
-
 
     @GetMapping("/kakao/success")
     public ResponseEntity<Map<String, String>> kakaoLoginSuccess(OAuth2AuthenticationToken authentication) {

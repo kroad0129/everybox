@@ -1,8 +1,8 @@
 package com.everybox.everybox.controller;
 
-import com.everybox.everybox.dto.CreatePostRequestDto;
+import com.everybox.everybox.dto.PostCreateRequestDto;
 import com.everybox.everybox.dto.PostResponseDto;
-import com.everybox.everybox.dto.UpdatePostRequestDto;
+import com.everybox.everybox.dto.PostUpdateRequestDto;
 import com.everybox.everybox.security.JwtAuthentication;
 import com.everybox.everybox.service.PostService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ public class PostController {
 
     @PostMapping
     public ResponseEntity<PostResponseDto> createPost(
-            @RequestBody CreatePostRequestDto request,
+            @RequestBody PostCreateRequestDto request,
             Authentication authentication) {
         Long userId = ((JwtAuthentication) authentication.getPrincipal()).getUserId();
         return ResponseEntity.ok(PostResponseDto.from(postService.createPost(
@@ -61,7 +61,7 @@ public class PostController {
     @PutMapping("/{postId}")
     public ResponseEntity<PostResponseDto> updatePost(
             @PathVariable Long postId,
-            @RequestBody UpdatePostRequestDto request,
+            @RequestBody PostUpdateRequestDto request,
             Authentication authentication) {
         Long userId = ((JwtAuthentication) authentication.getPrincipal()).getUserId();
         return ResponseEntity.ok(

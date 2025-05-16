@@ -24,4 +24,7 @@ public class User {
 
     @Column(nullable = false)
     private Boolean isVerified = false;
+
+    @Column(unique = true, nullable = true)
+    private String universityEmail;
 }
