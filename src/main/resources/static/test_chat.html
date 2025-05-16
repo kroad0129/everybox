@@ -28,13 +28,16 @@
 <div id="status">⏳ 웹소켓 연결 중...</div>
 
 <script>
+    // 서버 주소를 외부 도메인/IP로 변경하세요
+    const BASE = 'http://kroad0129.iptime.org:8080';
+
     const params = new URLSearchParams(location.search);
     const chatRoomId = params.get('chatRoomId');
-    let jwt = params.get('jwt') || localStorage.getItem("jwt");
+    let jwt = params.get('jwt') || localStorage.getItem("test_jwt");
 
     if (!jwt) {
         alert("토큰 없음! 다시 로그인 해주세요.");
-        location.href = "index.html";
+        location.href = "test_index.html";
     }
 
     if (jwt.startsWith('Bearer ')) {
@@ -46,13 +49,13 @@
 
     if (!chatRoomId || !jwt) {
         alert("잘못된 접근입니다.");
-        location.href = "index.html";
+        location.href = "test_index.html";
     }
 
     async function init() {
         try {
             // 사용자 정보 가져오기
-            const meRes = await fetch("http://localhost:8080/auth/me", {
+            const meRes = await fetch(`${BASE}/auth/me`, {
                 headers: { Authorization: 'Bearer ' + jwt }
             });
             if (!meRes.ok) throw new Error("사용자 인증 실패");
@@ -60,7 +63,7 @@
             userId = me.id;
 
             // 메시지 목록 불러오기
-            const messagesRes = await fetch(`http://localhost:8080/api/chatrooms/${chatRoomId}/messages`, {
+            const messagesRes = await fetch(`${BASE}/api/chatrooms/${chatRoomId}/messages`, {
                 headers: { Authorization: 'Bearer ' + jwt }
             });
             if (!messagesRes.ok) throw new Error("메시지 불러오기 실패");
@@ -68,7 +71,7 @@
             messages.forEach(showMessage);
 
             // 웹소켓 연결 및 구독
-            const socket = new SockJS("http://localhost:8080/ws-chat");
+            const socket = new SockJS(`${BASE}/ws-chat`);
             stomp = Stomp.over(socket);
             stomp.connect({ Authorization: 'Bearer ' + jwt }, () => {
                 document.getElementById("status").innerText = "✅ 연결됨";

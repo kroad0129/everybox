@@ -40,9 +40,7 @@ public class JwtAuthentication implements Authentication {
     }
 
     @Override
-    public Object getPrincipal() {
-        return this; // ✅ 전체 객체 반환
-    }
+    public Object getPrincipal() { return this; }
 
     @Override
     public boolean isAuthenticated() {

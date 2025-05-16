@@ -1,22 +1,18 @@
 package com.everybox.everybox.dto;
 
 import com.everybox.everybox.domain.User;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-@AllArgsConstructor
 @Builder
-public class UserResponseDto {
+public class SimpleUserDto {
     private Long id;
-    private String username;
     private String nickname;
 
-    public static UserResponseDto from(User user) {
-        return UserResponseDto.builder()
+    public static SimpleUserDto from(User user) {
+        return SimpleUserDto.builder()
                 .id(user.getId())
-                .username(user.getUsername())
                 .nickname(user.getNickname())
                 .build();
     }

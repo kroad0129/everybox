@@ -3,6 +3,7 @@ package com.everybox.everybox.service;
 import com.everybox.everybox.domain.User;
 import com.everybox.everybox.dto.LoginRequest;
 import com.everybox.everybox.dto.SignupRequest;
+import com.everybox.everybox.dto.UpdateUserRequestDto;
 import com.everybox.everybox.dto.UserResponseDto;
 import com.everybox.everybox.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,26 +16,45 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final MailService mailService;
 
     public UserResponseDto registerUser(SignupRequest request) {
-        if (!request.getEmail().matches("^[\\w._%+-]+@[\\w.-]+\\.ac\\.kr$")) {
-            throw new IllegalArgumentException("대학생 이메일(@xxx.ac.kr)만 가입할 수 있습니다.");
-        }
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("이미 가입된 이메일입니다.");
+        // 중복 ID 체크 등 비즈니스 정책
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("이미 가입된 아이디입니다.");
         }
         User user = User.builder()
-                .email(request.getEmail())
+                .username(request.getUsername())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
+                .isVerified(false)
                 .build();
         User saved = userRepository.save(user);
         return UserResponseDto.from(saved);
     }
 
+    public void sendVerificationCode(Long userId, String email) {
+        // 비즈니스 정책: 학교 이메일만 허용
+        if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.ac\\.kr$")) {
+            throw new IllegalArgumentException("학교 이메일(@xxx.ac.kr)만 인증 가능합니다.");
+        }
+        mailService.sendVerificationCode(userId, email);
+    }
+
+    public void verifyCode(Long userId, String code) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (mailService.verifyCode(userId, code)) {
+            user.setIsVerified(true);
+            userRepository.save(user);
+        } else {
+            throw new IllegalArgumentException("인증코드가 올바르지 않습니다.");
+        }
+    }
+
     public UserResponseDto login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 이메일입니다."));
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 아이디입니다."));
         if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
@@ -49,15 +69,39 @@ public class UserService {
         return UserResponseDto.from(findOrCreateKakaoUser(email, nickname));
     }
 
-    public User findOrCreateKakaoUser(String email, String nickname) {
-        return userRepository.findByEmail(email)
+    public User findOrCreateKakaoUser(String username, String nickname) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("username(이메일)이 없습니다!");
+        }
+        return userRepository.findByUsername(username)
                 .orElseGet(() -> {
                     User user = User.builder()
-                            .email(email)
+                            .username(username)
                             .nickname(nickname)
                             .password(null)
+                            .isVerified(false)
                             .build();
                     return userRepository.save(user);
                 });
+    }
+
+    public UserResponseDto updateUser(Long userId, Long loginUserId, UpdateUserRequestDto request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (!user.getId().equals(loginUserId)) {
+            throw new IllegalArgumentException("본인만 수정할 수 있습니다.");
+        }
+        if (request.getNickname() != null) user.setNickname(request.getNickname());
+        if (request.getPassword() != null) user.setPassword(passwordEncoder.encode(request.getPassword()));
+        return UserResponseDto.from(userRepository.save(user));
+    }
+
+    public void deleteUser(Long userId, Long loginUserId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (!user.getId().equals(loginUserId)) {
+            throw new IllegalArgumentException("본인만 삭제할 수 있습니다.");
+        }
+        userRepository.delete(user);
     }
 }

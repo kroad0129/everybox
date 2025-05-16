@@ -9,9 +9,10 @@ import com.everybox.everybox.security.JwtAuthentication;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 
 import java.util.Map;
 
@@ -32,22 +33,23 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) {
         UserResponseDto user = userService.login(request);
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail());
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
         return ResponseEntity.ok(Map.of("token", "Bearer " + token));
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserResponseDto> getMyInfo(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    public UserResponseDto getMyInfo(Authentication authentication) {
+        if (authentication instanceof JwtAuthentication jwtAuth) {
+            Long userId = jwtAuth.getUserId();
+            return userService.findDtoById(userId);
         }
-        Long userId = ((JwtAuthentication) authentication.getPrincipal()).getUserId();
-        UserResponseDto user = userService.findDtoById(userId);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-        return ResponseEntity.ok(user);
+        throw new IllegalArgumentException(
+                "잘못된 인증 방식입니다. 반드시 JWT 토큰으로 접근해야 합니다. (토큰 누락, 만료, 헤더 확인 필요)"
+        );
     }
+
+
+
 
     @GetMapping("/kakao/success")
     public ResponseEntity<Map<String, String>> kakaoLoginSuccess(OAuth2AuthenticationToken authentication) {
@@ -57,8 +59,16 @@ public class AuthController {
         String email = (String) kakaoAccount.get("email");
         String nickname = (String) profile.get("nickname");
 
+        // email(실제 username)이 null일 경우, 카카오 ID를 기반으로 대체값 생성
+        if (email == null || email.isBlank()) {
+            Object idObj = attributes.get("id");
+            String kakaoId = (idObj != null) ? idObj.toString() : "unknown";
+            email = "kakao_" + kakaoId + "@kakao.com"; // ex) kakao_1234567890@kakao.com
+        }
+
         UserResponseDto user = userService.findOrCreateKakaoUserDto(email, nickname);
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail());
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
         return ResponseEntity.ok(Map.of("token", "Bearer " + token));
     }
+
 }

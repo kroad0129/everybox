@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>Everybox</title>
+    <meta charset="UTF-8" />
+    <title>Test Everybox</title>
     <style>
         body { font-family: sans-serif; margin: 20px; }
         section { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; }
@@ -12,12 +12,12 @@
     </style>
 </head>
 <body>
-<h1>📦 Everybox</h1>
+<h1>📦 Test Everybox</h1>
 
 <section id="loginSection">
     <h2>🔐 로그인</h2>
-    <input id="email" type="email" placeholder="이메일">
-    <input id="password" type="password" placeholder="비밀번호">
+    <input id="email" type="email" placeholder="이메일" />
+    <input id="password" type="password" placeholder="비밀번호" />
     <button onclick="login()">로그인</button>
     <div style="margin: 10px 0; text-align: center;">or</div>
     <button id="kakaoLoginBtn" style="background-color: #FEE500; border: none; font-weight: bold;">
@@ -30,10 +30,11 @@
     <h2>👤 <span id="nickname"></span> 님 로그인 중</h2>
     <button id="logoutBtn" onclick="logout()">로그아웃</button>
     <div id="kakaoLogout" style="margin:8px 0"></div>
+
     <h3>📝 게시글 등록</h3>
-    <input id="postTitle" placeholder="제목">
-    <input id="postContent" placeholder="내용">
-    <input id="postLocation" placeholder="위치">
+    <input id="postTitle" placeholder="제목" />
+    <input id="postContent" placeholder="내용" />
+    <input id="postLocation" placeholder="위치" />
     <button onclick="createPost()">등록</button>
     <div id="postResult"></div>
 
@@ -45,19 +46,19 @@
 </section>
 
 <script>
-    const BASE = 'http://localhost:8080';
+    // 서버 주소를 실제 외부 도메인 또는 IP로 변경하세요
+    const BASE = 'http://kroad0129.iptime.org:8080';
+
     let jwt = null;
     let userId = null;
     let nickname = null;
     let isKakao = false;
 
-    // 반드시 이 함수로만 jwt를 저장/설정!
     function setJwtToken(rawToken) {
         jwt = rawToken.startsWith('Bearer ') ? rawToken.slice(7) : rawToken;
-        localStorage.setItem("jwt", jwt); // Bearer 없이 저장
+        localStorage.setItem("test_jwt", jwt);
     }
 
-    // 카카오 로그인
     document.getElementById('kakaoLoginBtn').onclick = function() {
         window.open(
             BASE + '/oauth2/authorization/kakao',
@@ -66,17 +67,15 @@
         );
     };
 
-    // 팝업에서 토큰 받으면 세팅
     window.addEventListener("message", async function(event) {
         if (event.data.token) {
-            setJwtToken(event.data.token); // 반드시 이 함수 사용!
+            setJwtToken(event.data.token);
             isKakao = true;
-            localStorage.setItem("isKakao", "true");
+            localStorage.setItem("test_isKakao", "true");
             await autoLogin();
         }
     });
 
-    // 일반 로그인
     async function login() {
         const res = await fetch(`${BASE}/auth/login`, {
             method: 'POST',
@@ -88,19 +87,18 @@
         });
         const data = await res.json();
         if (data.token) {
-            setJwtToken(data.token); // 반드시 이 함수 사용!
+            setJwtToken(data.token);
             isKakao = false;
-            localStorage.removeItem("isKakao");
+            localStorage.removeItem("test_isKakao");
             await autoLogin();
         } else {
             document.getElementById('loginResult').innerText = `❌ 로그인 실패: ${JSON.stringify(data)}`;
         }
     }
 
-    // 자동로그인
     window.onload = async function() {
-        jwt = localStorage.getItem("jwt");
-        isKakao = localStorage.getItem("isKakao") === "true";
+        jwt = localStorage.getItem("test_jwt");
+        isKakao = localStorage.getItem("test_isKakao") === "true";
         if (jwt) await autoLogin();
     };
 
@@ -124,7 +122,7 @@
 
             if (isKakao) {
                 document.getElementById('kakaoLogout').innerHTML =
-                    `<a href="https://accounts.kakao.com/logout?continue=${encodeURIComponent(location.origin + '/index.html')}" target="_blank" style="color:#3b1e1e;font-size:14px;">카카오 계정 로그아웃(강제)</a>`;
+                    `<a href="https://accounts.kakao.com/logout?continue=${encodeURIComponent(location.origin + '/test_index.html')}" target="_blank" style="color:#3b1e1e;font-size:14px;">카카오 계정 로그아웃(강제)</a>`;
             } else {
                 document.getElementById('kakaoLogout').innerHTML = '';
             }
@@ -137,8 +135,8 @@
         jwt = null;
         userId = null;
         nickname = null;
-        localStorage.removeItem("jwt");
-        localStorage.removeItem("isKakao");
+        localStorage.removeItem("test_jwt");
+        localStorage.removeItem("test_isKakao");
         document.getElementById('mainSection').style.display = 'none';
         document.getElementById('loginSection').style.display = 'block';
         document.getElementById('kakaoLogout').innerHTML = '';
@@ -188,7 +186,7 @@
         });
         if (res.ok) {
             const chatroom = await res.json();
-            window.location.href = `chat.html?chatRoomId=${chatroom.id}&jwt=${jwt}`;
+            window.location.href = `test_chat.html?chatRoomId=${chatroom.id}&jwt=${jwt}`;
         } else {
             alert(await res.text());
         }
@@ -215,7 +213,7 @@
     }
 
     function goToChat(chatRoomId) {
-        window.location.href = `chat.html?chatRoomId=${chatRoomId}&jwt=${jwt}`;
+        window.location.href = `test_chat.html?chatRoomId=${chatRoomId}&jwt=${jwt}`;
     }
 </script>
 </body>

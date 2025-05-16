@@ -5,11 +5,13 @@ import com.everybox.everybox.service.UserService;
 import com.everybox.everybox.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -20,20 +22,49 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     private final UserService userService;
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
-        OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+    public void onAuthenticationSuccess(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Authentication authentication
+    ) throws IOException, ServletException {
+        OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+        Map<String, Object> attributes = oauthToken.getPrincipal().getAttributes();
 
-        Map<String, Object> kakaoAccount = (Map<String, Object>) oauth2User.getAttributes().get("kakao_account");
-        Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
-
-        String email = (String) kakaoAccount.get("email");
-        String nickname = (String) profile.get("nickname");
+        Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
+        String email = null;
+        String nickname = null;
+        if (kakaoAccount != null) {
+            email = (String) kakaoAccount.get("email");
+            Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
+            if (profile != null) {
+                nickname = (String) profile.get("nickname");
+            }
+        }
+        // email이 null이면 id로 대체
+        if (email == null || email.isBlank()) {
+            Object idObj = attributes.get("id");
+            String kakaoId = (idObj != null) ? idObj.toString() : "unknown";
+            email = "kakao_" + kakaoId + "@kakao.com";
+        }
+        if (nickname == null || nickname.isBlank()) {
+            nickname = "카카오유저";
+        }
 
         User user = userService.findOrCreateKakaoUser(email, nickname);
-        String jwt = jwtUtil.generateToken(user.getId(), user.getEmail());
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
-        // ✅ JSON 응답 제거 → index.html로 리다이렉트하며 JWT 쿼리 파라미터로 넘김
-        String redirectUrl = "http://localhost:8080/index.html?token=" + jwt;
-        response.sendRedirect(redirectUrl);
+        // 팝업에서 부모창에 토큰을 넘기고 팝업 닫기!
+        String html = """
+        <html><body>
+        <script>
+            window.opener.postMessage({ token: 'Bearer %s' }, "*");
+            window.close();
+        </script>
+        <h3>카카오 로그인 성공! 창이 닫힙니다...</h3>
+        </body></html>
+        """.formatted(token);
+
+        response.setContentType("text/html; charset=UTF-8");
+        response.getWriter().write(html);
     }
 }

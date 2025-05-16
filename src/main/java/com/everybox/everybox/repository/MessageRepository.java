@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findByChatRoom(ChatRoom chatRoom);
+    List<Message> findByChatRoomIdOrderByCreatedAtAsc(Long chatRoomId);
 }

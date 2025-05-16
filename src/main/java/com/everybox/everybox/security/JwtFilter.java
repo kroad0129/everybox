@@ -34,11 +34,26 @@ public class JwtFilter extends OncePerRequestFilter {
                 Claims claims = jwtUtil.validateToken(token);
 
                 if (claims != null) {
-                    Long userId = claims.get("userId", Integer.class).longValue();
+                    Object userIdObj = claims.get("userId");
+                    Long userId = null;
+                    if (userIdObj instanceof Integer) {
+                        userId = ((Integer) userIdObj).longValue();
+                    } else if (userIdObj instanceof Long) {
+                        userId = (Long) userIdObj;
+                    } else {
+                        log.warn("Unexpected userId claim type: {}", userIdObj == null ? "null" : userIdObj.getClass());
+                    }
+
                     String email = claims.getSubject();
 
-                    JwtAuthentication authentication = new JwtAuthentication(userId, email);
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    if (userId != null) {
+                        JwtAuthentication authentication = new JwtAuthentication(userId, email);
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    } else {
+                        log.warn("❌ JWT 유효성 검사 실패: userId가 null입니다");
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        return;
+                    }
                 } else {
                     log.warn("❌ JWT 유효성 검사 실패: claims가 null입니다");
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);

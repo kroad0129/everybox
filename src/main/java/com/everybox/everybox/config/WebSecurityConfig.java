@@ -4,6 +4,7 @@ import com.everybox.everybox.security.JwtFilter;
 import com.everybox.everybox.security.CustomOAuth2SuccessHandler;
 import com.everybox.everybox.service.UserService;
 import com.everybox.everybox.util.JwtUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,13 +26,17 @@ public class WebSecurityConfig {
                 .csrf().disable()
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/users/email/verify-request",
+                                "/users/email/verify",
+                                "/mail/**",
                                 "/auth/**",
                                 "/oauth2/**",
                                 "/login/**",
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
-                                "/ws-chat/**" // ✅ WebSocket 경로는 누구나 접근 가능해야 함 (JWT로 따로 검증함)
+                                "/ws-chat/**",  // 허용
+                                "/**.html"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -39,10 +44,18 @@ public class WebSecurityConfig {
                         .successHandler(new CustomOAuth2SuccessHandler(jwtUtil, userService))
                         .userInfoEndpoint(userInfo -> userInfo.userService(new DefaultOAuth2UserService()))
                 )
-                .addFilterBefore(new JwtFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class);
-
+                .addFilterBefore(new JwtFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling()
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("{\"error\": \"Unauthorized\"}");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.getWriter().write("{\"error\": \"Forbidden\"}");
+                });
         return http.build();
     }
-
-
 }

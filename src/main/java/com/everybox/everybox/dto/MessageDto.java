@@ -1,27 +1,33 @@
 package com.everybox.everybox.dto;
 
 import com.everybox.everybox.domain.Message;
-import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Getter
-@Builder
+@Setter
 public class MessageDto {
-    private Long id;
     private Long chatRoomId;
     private Long senderId;
+    private String senderName;
     private String content;
-    private LocalDateTime createdAt;
+    private String createdAt;
 
-    public static MessageDto from(Message message) {
-        return MessageDto.builder()
-                .id(message.getId())
-                .chatRoomId(message.getChatRoom().getId())
-                .senderId(message.getSender().getId())
-                .content(message.getContent())
-                .createdAt(message.getCreatedAt())
-                .build();
+    public static MessageDto fromEntity(Message message) {
+        MessageDto dto = new MessageDto();
+        dto.setChatRoomId(message.getChatRoom().getId());
+        dto.setSenderId(message.getSender().getId());
+        dto.setSenderName(message.getSender().getNickname());
+        dto.setContent(message.getContent());
+
+        if (message.getCreatedAt() != null) {
+            dto.setCreatedAt(message.getCreatedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        } else {
+            dto.setCreatedAt("");
+        }
+
+        return dto;
     }
 }
