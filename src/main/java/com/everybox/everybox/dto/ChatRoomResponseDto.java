@@ -3,6 +3,8 @@ package com.everybox.everybox.dto;
 import com.everybox.everybox.domain.ChatRoom;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Getter @Setter @Builder
 @NoArgsConstructor @AllArgsConstructor
 public class ChatRoomResponseDto {
@@ -12,6 +14,7 @@ public class ChatRoomResponseDto {
     private String senderName;
     private Long receiverId;
     private String receiverName;
+    private LocalDateTime createdAt;
 
     public static ChatRoomResponseDto fromEntity(ChatRoom chatRoom) {
         return ChatRoomResponseDto.builder()
@@ -21,6 +24,7 @@ public class ChatRoomResponseDto {
                 .senderName(chatRoom.getSender().getNickname())
                 .receiverId(chatRoom.getReceiver().getId())
                 .receiverName(chatRoom.getReceiver().getNickname())
+                .createdAt(chatRoom.getCreatedAt())
                 .build();
     }
 }

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
 </head>
 <body>
+<!-- 로그인/로그아웃 -->
 <h2>로그인</h2>
 <form id="loginForm">
     <input type="text" id="loginUsername" placeholder="아이디" required>
@@ -14,12 +15,14 @@
 <button id="logoutBtn" style="display:none;">로그아웃</button>
 <pre id="loginResult"></pre>
 <hr>
+
+<!-- 카카오 로그인 -->
 <h2>카카오 로그인</h2>
 <button id="kakaoLoginBtn">카카오로 로그인</button>
 <pre id="kakaoLoginResult"></pre>
+<hr>
 
 <!-- 이메일 인증 -->
-<hr>
 <h2>이메일 인증</h2>
 <div id="emailVerifySection">
     <form id="verifyMailForm">
@@ -27,7 +30,6 @@
         <button type="submit">인증 코드 발송</button>
     </form>
     <pre id="verifyMailResult"></pre>
-
     <form id="verifyCodeForm" style="margin-top:10px;">
         <input type="text" id="verifyCode" placeholder="인증코드 입력" required>
         <button type="submit">인증 코드 확인</button>
@@ -35,13 +37,15 @@
     <pre id="verifyCodeResult"></pre>
 </div>
 <div id="verifiedMessage" style="display:none; color: green; font-weight: bold;"></div>
-
 <hr>
+
+<!-- 내 정보 -->
 <h2>내 정보</h2>
 <button onclick="loadMyInfo()">내 정보 조회</button>
 <pre id="myinfo"></pre>
-
 <hr>
+
+<!-- 게시글 등록 -->
 <h2>게시글 등록</h2>
 <form id="postForm">
     <input type="text" id="title" placeholder="제목" required><br>
@@ -52,16 +56,53 @@
     <button type="submit">게시글 등록</button>
 </form>
 <pre id="postResult"></pre>
-
 <hr>
+
+<!-- 게시글 목록 -->
 <h2>게시글 목록</h2>
 <button onclick="loadPosts()">게시글 불러오기</button>
 <pre id="posts"></pre>
 
 <script>
+    // ======================
+    // 변수 및 기본 세팅
+    // ======================
     let jwtToken = localStorage.getItem('jwtToken') || '';
 
-    // 로그아웃 버튼 핸들러
+    // ======================
+    // 1. 카카오 로그인 (팝업 없이, 메인창에서 리다이렉트)
+    // ======================
+    document.getElementById('kakaoLoginBtn').addEventListener('click', function() {
+        // 서버에서 카카오 인증 끝나면 /?token=... 형태로 메인창에 돌아오게 만들어야 함!
+        window.location.href = 'http://localhost:8080/oauth2/authorization/kakao';
+    });
+
+    // ======================
+    // 2. 페이지 로드 시 (토큰 파라미터가 있으면 저장)
+    // ======================
+    window.onload = function() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('token')) {
+            // 서버에서 받은 JWT 토큰을 localStorage에 저장
+            jwtToken = params.get('token');
+            localStorage.setItem('jwtToken', jwtToken);
+            document.getElementById('kakaoLoginResult').textContent = '카카오 로그인 성공!\n' + jwtToken;
+            document.getElementById('logoutBtn').style.display = 'inline';
+            // URL에서 token 파라미터를 제거 (보안 및 새로고침 이슈 방지)
+            window.history.replaceState({}, document.title, location.pathname);
+            loadMyInfo(); // 로그인 되면 내 정보 자동조회
+        } else if (jwtToken) {
+            // 이미 토큰이 있으면 UI에 바로 로그인 표시
+            document.getElementById('logoutBtn').style.display = 'inline';
+            loadMyInfo();
+        } else {
+            toggleEmailVerifySection(false);
+        }
+    };
+
+    // ======================
+    // 3. 로그아웃
+    // ======================
     document.getElementById('logoutBtn').onclick = function() {
         jwtToken = '';
         localStorage.removeItem('jwtToken');
@@ -74,33 +115,9 @@
         document.getElementById('verifiedMessage').textContent = '';
     };
 
-    document.getElementById('kakaoLoginBtn').addEventListener('click', function() {
-        window.location.href = 'http://localhost:8080/oauth2/authorization/kakao';
-    });
-
-    // 페이지 로드/카카오 인증 콜백
-    window.onload = function() {
-        const params = new URLSearchParams(window.location.search);
-        if (params.has('token')) {
-            jwtToken = params.get('token');
-            localStorage.setItem('jwtToken', jwtToken);
-            document.getElementById('kakaoLoginResult').textContent = '카카오 로그인 성공!\n' + jwtToken;
-            document.getElementById('logoutBtn').style.display = 'inline';
-            // URL 파라미터 제거
-            window.history.replaceState({}, document.title, location.pathname);
-            loadMyInfo(); // ✅ 카카오 로그인 시 내 정보 자동조회!
-        } else {
-            jwtToken = localStorage.getItem('jwtToken') || '';
-            if (jwtToken) {
-                document.getElementById('logoutBtn').style.display = 'inline';
-                loadMyInfo(); // 새로고침 후에도 내 정보 유지
-            } else {
-                toggleEmailVerifySection(false);
-            }
-        }
-    };
-
-    // 일반 로그인
+    // ======================
+    // 4. 일반 로그인
+    // ======================
     document.getElementById('loginForm').addEventListener('submit', function(e) {
         e.preventDefault();
         fetch('http://localhost:8080/auth/login', {
@@ -118,7 +135,7 @@
                     localStorage.setItem('jwtToken', jwtToken);
                     document.getElementById('loginResult').textContent = '로그인 성공!\n' + JSON.stringify(data, null, 2);
                     document.getElementById('logoutBtn').style.display = 'inline';
-                    loadMyInfo(); // ✅ 일반 로그인 시 내 정보 자동조회!
+                    loadMyInfo(); // 로그인 성공시 내 정보 자동조회
                 } else {
                     document.getElementById('loginResult').textContent = '로그인 실패\n' + JSON.stringify(data, null, 2);
                     toggleEmailVerifySection(false);
@@ -134,7 +151,9 @@
             });
     });
 
-    // 이메일 인증코드 발송
+    // ======================
+    // 5. 이메일 인증코드 발송
+    // ======================
     document.getElementById('verifyMailForm').addEventListener('submit', function(e) {
         e.preventDefault();
         if (!jwtToken) {
@@ -142,7 +161,7 @@
             return;
         }
         const email = document.getElementById('verifyEmail').value;
-        // 먼저 내 정보를 가져와서 인증된 이메일 중복 확인
+        // 먼저 내 정보 조회해서 인증된 이메일과 중복인지 체크
         fetch('http://localhost:8080/auth/me', {
             headers: { 'Authorization': jwtToken }
         })
@@ -152,8 +171,7 @@
                     document.getElementById('verifyMailResult').textContent = '이미 인증된 이메일입니다.';
                     return;
                 }
-                // 이메일이 다른 유저에게 이미 인증된 상태인지 체크하는 API를 서버에 구현해야함
-                // 여기서는 서버가 중복 이메일 인증 시 예외를 던진다고 가정하고 그냥 발송 요청
+                // 이메일 인증 요청 (중복은 서버에서 예외 처리)
                 fetch('http://localhost:8080/users/email/verify-request', {
                     method: 'POST',
                     headers: {
@@ -178,7 +196,9 @@
             });
     });
 
-    // 인증코드 확인
+    // ======================
+    // 6. 인증코드 확인
+    // ======================
     document.getElementById('verifyCodeForm').addEventListener('submit', function(e) {
         e.preventDefault();
         if (!jwtToken) {
@@ -196,7 +216,7 @@
             .then(res => {
                 if (res.ok) {
                     document.getElementById('verifyCodeResult').textContent = '이메일 인증 완료! 이제 모든 서비스 이용이 가능합니다.';
-                    loadMyInfo(); // 인증 상태 갱신용 내정보 재조회
+                    loadMyInfo(); // 인증 상태 갱신
                 } else {
                     return res.text().then(text => { throw new Error(text); });
                 }
@@ -206,12 +226,16 @@
             });
     });
 
-    // 이메일 인증 폼(섹션) 표시/숨김 함수
+    // ======================
+    // 7. 이메일 인증 폼(섹션) 표시/숨김 함수
+    // ======================
     function toggleEmailVerifySection(show) {
         document.getElementById('emailVerifySection').style.display = show ? 'block' : 'none';
     }
 
-    // 내 정보 조회 (수정: isVerified 체크 후 이메일 인증 UI 토글)
+    // ======================
+    // 8. 내 정보 조회
+    // ======================
     function loadMyInfo() {
         if (!jwtToken) {
             document.getElementById('myinfo').textContent = '로그인 후 이용하세요.';
@@ -230,12 +254,12 @@
                 document.getElementById('logoutBtn').style.display = 'inline';
 
                 if(data.isVerified) {
-                    // 이메일 인증 완료 상태
+                    // 이메일 인증 완료
                     toggleEmailVerifySection(false);
                     document.getElementById('verifiedMessage').style.display = 'block';
                     document.getElementById('verifiedMessage').textContent = `✅ 대학생 인증이 완료된 계정입니다. (${data.universityEmail})`;
                 } else {
-                    // 이메일 인증 필요 상태
+                    // 이메일 인증 필요
                     toggleEmailVerifySection(true);
                     document.getElementById('verifiedMessage').style.display = 'none';
                     document.getElementById('verifiedMessage').textContent = '';
@@ -249,7 +273,9 @@
             });
     }
 
-    // 게시글 등록
+    // ======================
+    // 9. 게시글 등록
+    // ======================
     document.getElementById('postForm').addEventListener('submit', function(e) {
         e.preventDefault();
         if (!jwtToken) {
@@ -279,7 +305,9 @@
             });
     });
 
-    // 게시글 목록 조회
+    // ======================
+    // 10. 게시글 목록 조회
+    // ======================
     function loadPosts() {
         fetch('http://localhost:8080/posts', {
             headers: { 'Authorization': jwtToken }
