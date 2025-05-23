@@ -86,16 +86,14 @@ class AuthService {
   }
 
   static Future<bool> checkIdDuplicate(String userId) async {
-    const endpoint = '/auth/check-id';
-    final body = {'username': userId};
+    final endpoint = '/auth/check-id?request=$userId';
 
     try {
-      final response = await ApiClient.post(endpoint, body);
+      final response = await ApiClient.post(endpoint, {});
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['success'];
-      } else {
         return true;
+      } else {
+        return false;
       }
     } catch (e) {
       dev.log('중복 확인 오류: $e');
