@@ -64,53 +64,9 @@ src/main/java/com/everybox/everybox
 
 ---
 
-## 🧪 실행 방법
-
-1. `application.yml` 설정
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/template_db
-    username: root
-    password: your_password
-  jpa:
-    hibernate:
-      ddl-auto: update
-  mail:
-    host: smtp.naver.com
-    username: your_email@naver.com
-    password: your_app_password
-    port: 465
-```
-
-2. 실행
-
-```bash
-./gradlew bootRun
-```
-
----
-
-## 📄 API 문서 (Swagger)
-
-- http://localhost:8080/swagger-ui/index.html
-
----
-
-## 🤝 기여 방법
-
-1. Fork → 기능 개발 → Pull Request
-2. 커밋 메시지 컨벤션 및 브랜치 전략을 프로젝트 규칙에 따를 것
-
----
-
 ## 📬 팀 정보
 
 성장톤 1팀 - 모두의 냉장고(모냉)
-- 👨‍💻 기획: 김재형
-- 🎨 디자인: 이다솔
-- 💻 프론트엔드: 김다인, 차예린
 - 🛠 백엔드: 김태희, 성유진
 
 GitHub 협업 링크: [https://github.com/growthon2025-team1](https://github.com/growthon2025-team1)
